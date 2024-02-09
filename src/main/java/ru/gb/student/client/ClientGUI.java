@@ -4,111 +4,143 @@ import ru.gb.student.server.ServerWindow;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
-public class ClientGUI extends JFrame {
-    ServerWindow serverWindow;
+public class ClientGUI extends JFrame implements View{
     private static final int WIDTH = 400;
     private static final int HEIGHT = 300;
-    private final JTextArea log = new JTextArea();
-    private final JPanel panelTop = new JPanel(new GridLayout(2,3));
-    private final JTextField tfIPAddress = new JTextField("127.0.0.1");
-    private final JTextField tfPort = new JTextField("8189");
-    private final JTextField tfLogin = new JTextField("Ivan Ivanovich");
-    private final JPasswordField passwordField = new JPasswordField("1234567");
-    private final JButton btnLogin = new JButton("Login");
-    private final JPanel panelBottom = new JPanel(new BorderLayout());
-    private final JTextField tfMessage = new JTextField();
-    private final JButton btnSend = new JButton("Send");
-    private boolean loginStatus;
+    private Client client;
 
-    public ClientGUI(ServerWindow serverWindow) throws HeadlessException {
-        this.serverWindow = serverWindow;
-        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        setSize(WIDTH, HEIGHT);
-        setLocation(serverWindow.getX() + ((int)(WIDTH * 1.05)) , serverWindow.getY());
-        setTitle("Chat client");
-        setBtnLogin();
-        setBtnSend();
-        setTfMessage();
-        setLogListener();
-        setPanelTop();
-        setPanelBottom();
-        add(panelTop, BorderLayout.NORTH);
-        add(panelBottom, BorderLayout.SOUTH);
-        log.setEditable(false);
-        JScrollPane scrolllog = new JScrollPane(log);
-        add(scrolllog);
+
+
+    private JTextArea log;
+    JTextField tfIPAddress, tfPort, tfLogin, tfMessage;
+    JPasswordField passwordField;
+    JButton btnLogin, btnSend;
+    JPanel panelTop, panelBottom;
+
+    public ClientGUI(ServerWindow serverWindow) {
+        setting(serverWindow);
+        createPanel();
         setAlwaysOnTop(true);
         setVisible(true);
-
     }
 
-    private void setBtnLogin() {
-        btnLogin.addActionListener(e -> {
-            if (serverWindow.isServerWorking()) {
-                serverWindow.saveMessage(tfLogin.getText() + " подключился к беседе.");
-                loginStatus = true;
-                tfMessage.setEditable(true);
-                panelTop.setVisible(false);
-                log.setText(serverWindow.getLogText());
-                log.append("Вы успешно подключились!");
-            } else {
-                log.setText("Сервер недоступен!");
-            }
-        });
+    private void setting(ServerWindow server) {
+        setSize(WIDTH, HEIGHT);
+        setResizable(true);
+        setTitle("Chat client");
+        setLocation(server.getX() + ((int)(WIDTH * 1.05)) , server.getY());
+        setDefaultCloseOperation(HIDE_ON_CLOSE);
+        client = new Client(this, server);
     }
 
-    private void setBtnSend() {
-        btnSend.addActionListener(e -> {
-            if (serverWindow.isServerWorking()) {
-                if (!tfMessage.getText().isEmpty()) {
-                    serverWindow.saveMessage(tfLogin.getText() + ": " + tfMessage.getText());
-                    tfMessage.setText("");
-                    log.setText(serverWindow.getLogText());
-                }
-            }
-        });
+    private void createPanel() {
+        add(createPanelTop(), BorderLayout.NORTH);
+        add(createLog());
+        add(createPanelBottom(), BorderLayout.SOUTH);
     }
 
-    private void setLogListener(){
-        this.serverWindow.getLogValue().addPropertyChangeListener(evt -> {
-            if(serverWindow.isServerWorking() && loginStatus) {
-                log.setText(serverWindow.getLogText());
-            } else {
-                loginStatus = false;
-                panelTop.setVisible(true);
-                log.setText("Сервер недоступен!");
-                tfMessage.setEditable(false);
-            }
-        });
+    private void hidePanelTop(boolean visible){
+        panelTop.setVisible(visible);
     }
 
+    private Component createPanelTop() {
+        panelTop = new JPanel(new GridLayout(2,3));
+        tfIPAddress = new JTextField("127.0.0.1");
+        tfPort = new JTextField("8189");
+        tfLogin = new JTextField("Ivan Ivanovich");
+        passwordField = new JPasswordField("1234567");
+        btnLogin = new JButton("Login");
+        setBtnLogin();
 
-    private void setPanelTop() {
         panelTop.add(tfIPAddress);
         panelTop.add(tfPort);
         panelTop.add(new JLabel(""));
         panelTop.add(tfLogin);
         panelTop.add(passwordField);
         panelTop.add(btnLogin);
+        return panelTop;
     }
 
-    private void setPanelBottom() {
-        tfMessage.setEditable(loginStatus);
+    private void setBtnLogin() {
+        btnLogin.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                connectedToServer();
+            }
+        });
+    }
+
+    private Component createLog(){
+        log = new JTextArea();
+        log.setEditable(false);
+        return new JScrollPane(log);
+    }
+
+    private Component createPanelBottom() {
+        panelBottom = new JPanel(new BorderLayout());
+        tfMessage = new JTextField();
+        setTfMessage();
+
+        btnSend = new JButton("Send");
+        setBtnSend();
         panelBottom.add(tfMessage, BorderLayout.CENTER);
         panelBottom.add(btnSend, BorderLayout.EAST);
+        return panelBottom;
     }
 
     private void setTfMessage() {
-        tfMessage.addActionListener(e -> {
-            if (serverWindow.isServerWorking()) {
-                if (!tfMessage.getText().isEmpty()) {
-                    serverWindow.saveMessage(tfLogin.getText() + ": " + tfMessage.getText());
-                    tfMessage.setText("");
-                    log.setText(serverWindow.getLogText());
+        tfMessage.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                if (e.getKeyChar() == '\n'){
+                    sendMessage();
                 }
             }
         });
+    }
+
+    private void setBtnSend() {
+        btnSend.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                sendMessage();
+            }
+        });
+    }
+
+//    @Override
+//    protected void processWindowEvent(WindowEvent e) {
+//        super.processWindowEvent(e);
+//        if (e.getID() == WindowEvent.WINDOW_CLOSING){
+//            disconnectedFromServer();
+//        }
+//    }
+
+    public void sendMessage(){
+        client.sendMessage(tfMessage.getText());
+        tfMessage.setText("");
+    }
+    @Override
+    public void sendMessage(String message) {
+        log.append(message);
+    }
+
+    @Override
+    public void connectedToServer() {
+        if (client.connectToServer(tfLogin.getText())){
+            hidePanelTop(false);
+        }
+    }
+
+    @Override
+    public void disconnectedFromServer() {
+        hidePanelTop(true);
+        client.disconnectFromServer();
     }
 }
 
