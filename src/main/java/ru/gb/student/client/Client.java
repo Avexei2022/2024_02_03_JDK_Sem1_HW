@@ -1,16 +1,15 @@
 package ru.gb.student.client;
 
 import ru.gb.student.server.Server;
-import ru.gb.student.server.ServerWindow;
 
 public class Client {
-    private View view;
+    private final ClientView clientView;
     private String name;
-    private ServerWindow server;
+    private final Server server;
     private boolean connected;
 
-    public Client(View view, ServerWindow server) {
-        this.view = view;
+    public Client(ClientView clientView, Server server) {
+        this.clientView = clientView;
         this.server = server;
     }
 
@@ -33,14 +32,13 @@ public class Client {
     public void disconnectFromServer(){
         if (connected) {
             connected = false;
-            server.disconnectUser(this);
-            view.disconnectedFromServer();
+            clientView.disconnectedFromServer();
             showOnWindow("Вы были отключены от сервера!");
         }
     }
 
-    public void answerFromServer(String messageFromServer){
-        showOnWindow(messageFromServer);
+    public void leaveChart() {
+        server.disconnectUser(this);
     }
 
     public void sendMessage(String message){
@@ -54,6 +52,10 @@ public class Client {
     }
 
     public void showOnWindow(String text) {
-        view.sendMessage(text + "\n");
+        clientView.sendMessage(text + "\n");
+    }
+
+    public String getName() {
+        return name;
     }
 }

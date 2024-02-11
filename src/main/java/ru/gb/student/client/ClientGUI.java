@@ -4,23 +4,19 @@ import ru.gb.student.server.ServerWindow;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
+import java.awt.event.*;
+import java.util.Random;
 
-public class ClientGUI extends JFrame implements View{
+public class ClientGUI extends JFrame implements ClientView {
     private static final int WIDTH = 400;
     private static final int HEIGHT = 300;
     private Client client;
-
-
-
     private JTextArea log;
     JTextField tfIPAddress, tfPort, tfLogin, tfMessage;
     JPasswordField passwordField;
     JButton btnLogin, btnSend;
     JPanel panelTop, panelBottom;
+
 
     public ClientGUI(ServerWindow serverWindow) {
         setting(serverWindow);
@@ -29,13 +25,15 @@ public class ClientGUI extends JFrame implements View{
         setVisible(true);
     }
 
-    private void setting(ServerWindow server) {
+    private void setting(ServerWindow serverWindow) {
         setSize(WIDTH, HEIGHT);
         setResizable(true);
         setTitle("Chat client");
-        setLocation(server.getX() + ((int)(WIDTH * 1.05)) , server.getY());
+        double x = GraphicsEnvironment.getLocalGraphicsEnvironment().getCenterPoint().getX();
+        double y = GraphicsEnvironment.getLocalGraphicsEnvironment().getCenterPoint().getY();
+        setLocation((int) (x + x * 0.25 * Math.random()), (int) ((y *0.25) + (y * Math.random())));
         setDefaultCloseOperation(HIDE_ON_CLOSE);
-        client = new Client(this, server);
+        client = new Client(this, serverWindow.getConnection());
     }
 
     private void createPanel() {
@@ -52,7 +50,9 @@ public class ClientGUI extends JFrame implements View{
         panelTop = new JPanel(new GridLayout(2,3));
         tfIPAddress = new JTextField("127.0.0.1");
         tfPort = new JTextField("8189");
-        tfLogin = new JTextField("Ivan Ivanovich");
+        String name = "Иван-" + new Random().nextInt(20);
+        tfLogin = new JTextField(name);
+        setTitle(name);
         passwordField = new JPasswordField("1234567");
         btnLogin = new JButton("Login");
         setBtnLogin();
@@ -67,12 +67,13 @@ public class ClientGUI extends JFrame implements View{
     }
 
     private void setBtnLogin() {
-        btnLogin.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                connectedToServer();
-            }
-        });
+        btnLogin.addActionListener(e -> login());
+    }
+
+    private void login() {
+        if (client.connectToServer(tfLogin.getText())) {
+            panelTop.setVisible(false);
+        }
     }
 
     private Component createLog(){
@@ -98,49 +99,37 @@ public class ClientGUI extends JFrame implements View{
             @Override
             public void keyTyped(KeyEvent e) {
                 if (e.getKeyChar() == '\n'){
-                    sendMessage();
+                    message();
                 }
             }
         });
     }
 
     private void setBtnSend() {
-        btnSend.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                sendMessage();
-            }
-        });
+        btnSend.addActionListener(e -> message());
     }
 
-//    @Override
-//    protected void processWindowEvent(WindowEvent e) {
-//        super.processWindowEvent(e);
-//        if (e.getID() == WindowEvent.WINDOW_CLOSING){
-//            disconnectedFromServer();
-//        }
-//    }
-
-    public void sendMessage(){
+    private void message() {
         client.sendMessage(tfMessage.getText());
         tfMessage.setText("");
     }
+
     @Override
     public void sendMessage(String message) {
         log.append(message);
     }
 
     @Override
-    public void connectedToServer() {
-        if (client.connectToServer(tfLogin.getText())){
-            hidePanelTop(false);
-        }
+    public void disconnectedFromServer() {
+        hidePanelTop(true);
     }
 
     @Override
-    public void disconnectedFromServer() {
-        hidePanelTop(true);
-        client.disconnectFromServer();
+    protected void processWindowEvent(WindowEvent e) {
+        super.processWindowEvent(e);
+        if (e.getID() == WindowEvent.WINDOW_CLOSING) {
+            client.leaveChart();
+        }
     }
 }
 

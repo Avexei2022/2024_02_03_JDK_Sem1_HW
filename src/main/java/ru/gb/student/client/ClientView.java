@@ -1,7 +1,6 @@
 package ru.gb.student.client;
 
-public interface View {
+public interface ClientView {
     void sendMessage(String message);
-    void connectedToServer();
     void disconnectedFromServer();
 }
