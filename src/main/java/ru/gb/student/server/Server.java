@@ -2,6 +2,8 @@ package ru.gb.student.server;
 
 import ru.gb.student.client.Client;
 import ru.gb.student.repo.RepoFile;
+import ru.gb.student.repo.RepoInterface;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,12 +11,12 @@ import java.util.List;
 public class Server{
     private final ServerView serverView;
     private final List<Client> clientList;
-    private final RepoFile repoFile;
+    private final RepoInterface<String> repoInterface;
     boolean work;
 
-    public Server(ServerView serverView, RepoFile repoFile) {
+    public Server(ServerView serverView, RepoInterface<String> repoInterface) {
         this.serverView = serverView;
-        this.repoFile = repoFile;
+        this.repoInterface = repoInterface;
         clientList = new ArrayList<>();
     }
 
@@ -63,12 +65,12 @@ public class Server{
     }
 
     private void saveChartHistory (String newStringToLog) throws IOException {
-        repoFile.save(newStringToLog);
+        repoInterface.save(newStringToLog);
     }
 
     private String loadChartHistory(){
         try {
-            return repoFile.load();
+            return repoInterface.load();
         } catch (IOException e) {
             return e.getMessage();
         }
